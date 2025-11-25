@@ -17,6 +17,15 @@ type Config struct {
 	// Service is the AWS service name (defaults to "s3").
 	// For Cloudflare R2, this should be "s3".
 	Service string
+
+	// ThreadSafety enables thread-safe operation of the Signer.
+	// When true, the Signer can be used concurrently from multiple goroutines.
+	// When false, the Signer must be used from a single goroutine at a time.
+	ThreadSafety bool
+
+	// DisableHeaderHoisting prevents headers from being moved to query
+	// string during presigning.
+	DisableHeaderHoisting bool
 }
 
 // Validate checks that all required fields are set.

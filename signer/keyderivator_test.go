@@ -7,7 +7,7 @@ import (
 )
 
 func TestDeriveKey(t *testing.T) {
-	deriver := NewSigningKeyDeriver()
+	deriver := NewSigningKeyDeriver(newDerivedKeyCacheNoThr())
 
 	accessKeyID := "AKID"
 	secretAccessKey := "SECRET"
@@ -97,7 +97,7 @@ func TestDeriveKey(t *testing.T) {
 
 func TestDeriveKeyKnownValue(t *testing.T) {
 	// Test with known values to ensure correctness
-	deriver := NewSigningKeyDeriver()
+	deriver := NewSigningKeyDeriver(newDerivedKeyCacheNoThr())
 
 	secret := "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
 	service := "iam"
@@ -139,7 +139,7 @@ func TestDeriveKeyKnownValue(t *testing.T) {
 }
 
 func TestKeyDerivatorCache(t *testing.T) {
-	deriver := NewSigningKeyDeriver()
+	deriver := NewSigningKeyDeriver(newDerivedKeyCacheNoThr())
 
 	accessKeyID := "AKID"
 	secretAccessKey := "SECRET"

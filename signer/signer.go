@@ -12,33 +12,35 @@ import (
 	"time"
 )
 
-// SignerOptions configures signing behavior.
-// Reference: AWS SDK v4 signer v4.go SignerOptions
-type SignerOptions struct {
-	// DisableHeaderHoisting prevents headers from being moved to query
-	// string during presigning.
-	DisableHeaderHoisting bool
-}
-
 // Signer applies AWS Signature Version 4 signing to HTTP requests.
-// Note: Signer instances are not safe for concurrent use. Each Signer
-// must be used from a single goroutine at a time.
+// Thread safety is controlled by Config.ThreadSafety:
+//   - When ThreadSafety is true, the Signer can be used concurrently from multiple goroutines.
+//   - When ThreadSafety is false, the Signer must be used from a single goroutine at a time.
+//
 // Reference: AWS SDK v4 signer v4.go Signer struct
 type Signer struct {
 	config       Config
 	keyDerivator keyDerivator
-	options      SignerOptions
 }
 
 // NewSigner creates a new Signer with the given config.
+// The ThreadSafety field in config determines whether a thread-safe
+// or non-thread-safe cache implementation is used.
 func NewSigner(config Config) (*Signer, error) {
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
+
+	var cache derivedKeyCacheInterface
+	if config.ThreadSafety {
+		cache = newDerivedKeyCacheThr()
+	} else {
+		cache = newDerivedKeyCacheNoThr()
+	}
+
 	return &Signer{
 		config:       config,
-		keyDerivator: NewSigningKeyDeriver(),
-		options:      SignerOptions{},
+		keyDerivator: NewSigningKeyDeriver(cache),
 	}, nil
 }
 
@@ -75,7 +77,7 @@ func (s *Signer) SignHTTP(req *http.Request, payloadHash string, signingTime tim
 		AccessKeyID:           s.config.AccessKeyID,
 		SecretAccessKey:       s.config.SecretAccessKey,
 		Time:                  NewSigningTime(signingTime),
-		DisableHeaderHoisting: s.options.DisableHeaderHoisting,
+		DisableHeaderHoisting: s.config.DisableHeaderHoisting,
 		KeyDerivator:          s.keyDerivator,
 	}
 
@@ -119,7 +121,7 @@ func (s *Signer) PresignHTTP(req *http.Request, payloadHash string, signingTime 
 		SecretAccessKey:       s.config.SecretAccessKey,
 		Time:                  NewSigningTime(signingTime),
 		IsPreSign:             true,
-		DisableHeaderHoisting: s.options.DisableHeaderHoisting,
+		DisableHeaderHoisting: s.config.DisableHeaderHoisting,
 		KeyDerivator:          s.keyDerivator,
 	}
 
